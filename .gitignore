@@ -1,0 +1,23 @@
+# Environment / secrets (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Docker / runtime
+*_pgdata/
+.dockerignore
