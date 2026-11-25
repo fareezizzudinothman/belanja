@@ -2,6 +2,7 @@ name: belanja
 
 services:
   backend:
+    container_name: belanja
     build:
       context: .
       dockerfile: Dockerfile
