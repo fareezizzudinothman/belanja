@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
@@ -17,36 +18,76 @@ env:
   IMAGE_NAME: ghcr.io/fareezizzudinothman/belanja
 
 jobs:
+
+  # ==========================================
+  # CI - TEST AND BUILD
+  # ==========================================
+
   build-and-publish:
     name: Test and Build Docker Image
     runs-on: ubuntu-latest
 
     steps:
+
+      # --------------------------------------
+      # CHECKOUT
+      # --------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # --------------------------------------
+      # NODE.JS SETUP
+      # --------------------------------------
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
+      # --------------------------------------
+      # BACKEND DEPENDENCIES
+      # --------------------------------------
+
+      - name: Install backend dependencies
+        working-directory: backend
         run: npm ci
 
-      - name: Run tests
+      # --------------------------------------
+      # BACKEND TESTS
+      # --------------------------------------
+
+      - name: Run backend tests
+        working-directory: backend
         run: npm test --if-present
+
+      # --------------------------------------
+      # DOCKER VALIDATION
+      # --------------------------------------
 
       - name: Validate Dockerfile
         run: test -f Dockerfile
 
-      - name: Login to GHCR
+      - name: Validate Docker Compose file
+        run: test -f docker-compose.yml
+
+      # --------------------------------------
+      # GHCR LOGIN
+      # --------------------------------------
+
+      - name: Login to GitHub Container Registry
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --------------------------------------
+      # DOCKER IMAGE METADATA
+      # --------------------------------------
 
       - name: Extract Docker metadata
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -58,6 +99,10 @@ jobs:
             type=raw,value=latest
             type=sha,format=short
 
+      # --------------------------------------
+      # BUILD AND PUBLISH IMAGE
+      # --------------------------------------
+
       - name: Build and push Docker image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
@@ -67,3 +112,18 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # --------------------------------------
+      # PIPELINE SUMMARY
+      # --------------------------------------
+
+      - name: Display CI result
+        if: success()
+        run: |
+          echo "=================================="
+          echo "BELANJA CI COMPLETED SUCCESSFULLY"
+          echo "=================================="
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Commit: $GITHUB_SHA"
+          echo "Image: $IMAGE_NAME"
+          echo "=================================="
